@@ -270,6 +270,7 @@ pub struct PanOrbitCamera {
     /// up direction. The default up is Y, but if you want the camera rotated.
     /// The axis can be switched. Default is [Vec3::X, Vec3::Y, Vec3::Z]
     pub axis: [Vec3; 3],
+    pub pan_axis: [Vec3; 3],
 }
 
 impl Default for PanOrbitCamera {
@@ -313,6 +314,7 @@ impl Default for PanOrbitCamera {
             zoom_lower_limit: 0.05,
             force_update: false,
             axis: [Vec3::X, Vec3::Y, Vec3::Z],
+            pan_axis: [Vec3::X, Vec3::Y, Vec3::Z],
         }
     }
 }
@@ -667,8 +669,8 @@ fn pan_orbit_camera(
                     }
                 }
                 // Translate by local axes
-                let right = transform.rotation * pan_orbit.axis[0] * -pan.x;
-                let up = transform.rotation * pan_orbit.axis[1] * pan.y;
+                let right = transform.rotation * pan_orbit.pan_axis[0] * -pan.x;
+                let up = transform.rotation * pan_orbit.pan_axis[1] * pan.y;
                 let translation = (right + up) * multiplier;
                 pan_orbit.target_focus += translation;
                 has_moved = true;
