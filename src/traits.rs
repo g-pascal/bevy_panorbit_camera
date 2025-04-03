@@ -20,3 +20,17 @@ impl OptionalClamp for f32 {
         new_val
     }
 }
+impl OptionalClamp for f64 {
+    type N = f64;
+
+    fn clamp_optional(&self, min: Option<Self::N>, max: Option<Self::N>) -> Self::N {
+        let mut new_val = *self;
+        if let Some(min) = min {
+            new_val = f64::max(new_val, min);
+        }
+        if let Some(max) = max {
+            new_val = f64::min(new_val, max);
+        }
+        new_val
+    }
+}

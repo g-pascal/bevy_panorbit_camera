@@ -107,10 +107,10 @@ fn process_scroll_events(
                             result.scroll_pixel += event.y * 0.005;
                         } else if is_pan_modifier_pressed {
                             result.trackpad_pan +=
-                                Vec2::new(event.x, event.y) * pan_orbit.trackpad_sensitivity;
+                                Vec2::new(event.x, event.y) * pan_orbit.trackpad_sensitivity as f32;
                         } else {
                             result.trackpad_orbit +=
-                                Vec2::new(event.x, event.y) * pan_orbit.trackpad_sensitivity;
+                                Vec2::new(event.x, event.y) * pan_orbit.trackpad_sensitivity as f32;
                         }
                     }
                 }
@@ -178,7 +178,7 @@ fn process_pinch_events(
     if no_modifiers_pressed {
         pinch_events
             .read()
-            .map(|event| event.0 * 10.0 * pan_orbit.trackpad_sensitivity)
+            .map(|event| event.0 * 10.0 * pan_orbit.trackpad_sensitivity as f32)
             .sum()
     } else {
         0.0

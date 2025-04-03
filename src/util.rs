@@ -1,13 +1,16 @@
-use bevy::prelude::*;
+use bevy::{
+    math::{DMat3, DQuat, DVec3},
+    prelude::*,
+};
 
 const EPSILON: f32 = 0.001;
 
 pub fn calculate_from_translation_and_focus(
-    translation: Vec3,
-    focus: Vec3,
-    axis: [Vec3; 3],
-) -> (f32, f32, f32) {
-    let axis = Mat3::from_cols(axis[0], axis[1], axis[2]);
+    translation: DVec3,
+    focus: DVec3,
+    axis: [DVec3; 3],
+) -> (f64, f64, f64) {
+    let axis = DMat3::from_cols(axis[0], axis[1], axis[2]);
     let comp_vec = translation - focus;
     let mut radius = comp_vec.length();
     if radius == 0.0 {
@@ -21,24 +24,28 @@ pub fn calculate_from_translation_and_focus(
 
 /// Update `transform` based on yaw, pitch, and the camera's focus and radius
 pub fn update_orbit_transform(
-    yaw: f32,
-    pitch: f32,
-    mut radius: f32,
-    focus: Vec3,
+    yaw: f64,
+    pitch: f64,
+    mut radius: f64,
+    focus: DVec3,
     transform: &mut Transform,
+    position: &mut DVec3,
     projection: &mut Projection,
-    axis: [Vec3; 3],
+    axis: [DVec3; 3],
 ) {
     let mut new_transform = Transform::IDENTITY;
     if let Projection::Orthographic(ref mut p) = *projection {
-        p.scale = radius;
+        p.scale = radius as f32;
         // (near + far) / 2.0 ensures that objects near `focus` are not clipped
-        radius = (p.near + p.far) / 2.0;
+        radius = (p.near as f64 + p.far as f64) / 2.0;
     }
-    let yaw_rot = Quat::from_axis_angle(axis[1], yaw);
-    let pitch_rot = Quat::from_axis_angle(axis[0], -pitch);
-    new_transform.rotation *= yaw_rot * pitch_rot;
-    new_transform.translation += focus + new_transform.rotation * Vec3::new(0.0, 0.0, radius);
+    let yaw_rot = DQuat::from_axis_angle(axis[1], yaw);
+    let pitch_rot = DQuat::from_axis_angle(axis[0], -pitch);
+    let new_rotation = yaw_rot * pitch_rot;
+    new_transform.rotation *= new_rotation.as_quat();
+    let new_position = focus + new_rotation * DVec3::new(0.0, 0.0, radius);
+    *position = new_position;
+    new_transform.translation += new_position.as_vec3();
     *transform = new_transform;
 }
 
@@ -46,10 +53,23 @@ pub fn approx_equal(a: f32, b: f32) -> bool {
     (a - b).abs() < EPSILON
 }
 
+pub fn approx_equal_f64(a: f64, b: f64) -> bool {
+    (a - b).abs() < EPSILON as f64
+}
+
 pub fn lerp_and_snap_f32(from: f32, to: f32, smoothness: f32, dt: f32) -> f32 {
     let t = smoothness.powi(7);
     let mut new_value = from.lerp(to, 1.0 - t.powf(dt));
     if smoothness < 1.0 && approx_equal(new_value, to) {
+        new_value = to;
+    }
+    new_value
+}
+
+pub fn lerp_and_snap_f64(from: f64, to: f64, smoothness: f64, dt: f64) -> f64 {
+    let t = smoothness.powi(7);
+    let mut new_value = from.lerp(to, 1.0 - t.powf(dt));
+    if smoothness < 1.0 && approx_equal_f64(new_value, to) {
         new_value = to;
     }
     new_value
@@ -64,18 +84,28 @@ pub fn lerp_and_snap_vec3(from: Vec3, to: Vec3, smoothness: f32, dt: f32) -> Vec
     new_value
 }
 
+pub fn lerp_and_snap_dvec3(from: DVec3, to: DVec3, smoothness: f64, dt: f64) -> DVec3 {
+    let t = smoothness.powi(7);
+    let mut new_value = from.lerp(to, 1.0 - t.powf(dt));
+    if smoothness < 1.0 && approx_equal_f64((new_value - to).length(), 0.0) {
+        new_value.x = to.x;
+    }
+    new_value
+}
+
 #[cfg(test)]
 mod calculate_from_translation_and_focus_tests {
     use super::*;
+    use core::f64;
     use float_cmp::approx_eq;
     use std::f32::consts::PI;
-    const AXIS: [Vec3; 3] = [Vec3::X, Vec3::Y, Vec3::Z];
-    const AXIS_Z_UP: [Vec3; 3] = [Vec3::X, Vec3::Z, Vec3::Y];
+    const AXIS: [DVec3; 3] = [DVec3::X, DVec3::Y, DVec3::Z];
+    const AXIS_Z_UP: [DVec3; 3] = [DVec3::X, DVec3::Z, DVec3::Y];
 
     #[test]
     fn zero() {
-        let translation = Vec3::new(0.0, 0.0, 0.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 0.0, 0.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
         assert_eq!(yaw, 0.0);
         assert_eq!(pitch, 0.0);
@@ -84,8 +114,8 @@ mod calculate_from_translation_and_focus_tests {
 
     #[test]
     fn zero_z_up_axis() {
-        let translation = Vec3::new(0.0, 0.0, 0.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 0.0, 0.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) =
             calculate_from_translation_and_focus(translation, focus, AXIS_Z_UP);
         assert_eq!(yaw, 0.0);
@@ -95,8 +125,8 @@ mod calculate_from_translation_and_focus_tests {
 
     #[test]
     fn in_front() {
-        let translation = Vec3::new(0.0, 0.0, 5.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 0.0, 5.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
         assert_eq!(yaw, 0.0);
         assert_eq!(pitch, 0.0);
@@ -105,9 +135,9 @@ mod calculate_from_translation_and_focus_tests {
 
     #[test]
     fn in_front_z_up_axis() {
-        let translation = Vec3::new(0.0, 5.0, 0.0);
-        let axis = [Vec3::X, Vec3::Z, Vec3::Y];
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 5.0, 0.0);
+        let axis = [DVec3::X, DVec3::Z, DVec3::Y];
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, axis);
         assert_eq!(yaw, 0.0);
         assert_eq!(pitch, 0.0);
@@ -116,53 +146,53 @@ mod calculate_from_translation_and_focus_tests {
 
     #[test]
     fn to_the_side() {
-        let translation = Vec3::new(5.0, 0.0, 0.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(5.0, 0.0, 0.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
-        assert!(approx_eq!(f32, yaw, PI / 2.0));
+        assert!(approx_eq!(f64, yaw, f64::consts::PI / 2.0));
         assert_eq!(pitch, 0.0);
         assert_eq!(radius, 5.0);
     }
 
     #[test]
     fn above() {
-        let translation = Vec3::new(0.0, 5.0, 0.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 5.0, 0.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
         assert_eq!(yaw, 0.0);
-        assert!(approx_eq!(f32, pitch, PI / 2.0));
+        assert!(approx_eq!(f64, pitch, f64::consts::PI / 2.0));
         assert_eq!(radius, 5.0);
     }
 
     #[test]
     fn above_z_as_up_axis() {
-        let translation = Vec3::new(0.0, 0.0, 5.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.0, 0.0, 5.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) =
             calculate_from_translation_and_focus(translation, focus, AXIS_Z_UP);
         assert_eq!(yaw, 0.0);
-        assert!(approx_eq!(f32, pitch, PI / 2.0));
+        assert!(approx_eq!(f64, pitch, f64::consts::PI / 2.0));
         assert_eq!(radius, 5.0);
     }
 
     #[test]
     fn arbitrary() {
-        let translation = Vec3::new(0.92563736, 3.864204, -1.0105048);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(0.92563736, 3.864204, -1.0105048);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
-        assert!(approx_eq!(f32, yaw, 2.4));
-        assert!(approx_eq!(f32, pitch, 1.23));
+        assert!(approx_eq!(f64, yaw, 2.4));
+        assert!(approx_eq!(f64, pitch, 1.23));
         assert_eq!(radius, 4.1);
     }
 
     #[test]
     fn negative_x() {
-        let translation = Vec3::new(-5.0, 5.0, 9.0);
-        let focus = Vec3::ZERO;
+        let translation = DVec3::new(-5.0, 5.0, 9.0);
+        let focus = DVec3::ZERO;
         let (yaw, pitch, radius) = calculate_from_translation_and_focus(translation, focus, AXIS);
-        assert!(approx_eq!(f32, yaw, -0.5070985));
-        assert!(approx_eq!(f32, pitch, 0.45209613));
-        assert!(approx_eq!(f32, radius, 11.445523));
+        assert!(approx_eq!(f64, yaw, -0.5070985));
+        assert!(approx_eq!(f64, pitch, 0.45209613));
+        assert!(approx_eq!(f64, radius, 11.445523));
     }
 }
 

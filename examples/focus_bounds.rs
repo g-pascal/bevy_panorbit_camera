@@ -1,6 +1,6 @@
 //! Demonstrates how to keep the camera's focus inside a shape.
 
-use bevy::{color::palettes::css::WHITE, prelude::*};
+use bevy::{color::palettes::css::WHITE, math::DVec3, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 fn main() {
@@ -43,7 +43,7 @@ fn setup(
             // Shape can take Cuboid or Sphere
             focus_bounds_shape: Some(Cuboid::new(1.0, 1.0, 1.0).into()),
             // Move the origin of the shape
-            focus_bounds_origin: Vec3::splat(1.0),
+            focus_bounds_origin: DVec3::splat(1.0),
             ..default()
         },
     ));

@@ -6,9 +6,9 @@
 //!   Pan: Shift + Middle click
 //!   Zoom: Mousewheel
 
-use bevy::prelude::*;
+use bevy::{math::DVec3, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin, TouchControls};
-use std::f32::consts::TAU;
+use std::f64::consts::TAU;
 
 fn main() {
     App::new()
@@ -49,7 +49,7 @@ fn setup(
         // we don't set transform on the camera.
         PanOrbitCamera {
             // Set focal point (what the camera should look at)
-            focus: Vec3::new(0.0, 1.0, 0.0),
+            focus: DVec3::new(0.0, 1.0, 0.0),
             // Set the starting position, relative to focus (overrides camera's transform).
             yaw: Some(TAU / 8.0),
             pitch: Some(TAU / 8.0),

@@ -1,6 +1,6 @@
 //! Demonstrates the simplest usage
 
-use bevy::prelude::*;
+use bevy::{math::DVec3, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 fn main() {
@@ -40,10 +40,10 @@ fn setup(
     ));
     // Camera
     // Swaps the axis of the camera to use Z as up instead of Y as up which is the default.
-    let swapped_axis = [Vec3::X, Vec3::Z, Vec3::Y];
+    let swapped_axis = [DVec3::X, DVec3::Z, DVec3::Y];
     let camera = PanOrbitCamera {
         axis: swapped_axis,
-        pitch: Some(-45f32.to_radians()),
+        pitch: Some(-45f64.to_radians()),
         ..default()
     };
     commands.spawn((Transform::from_xyz(0.0, 1.5, 5.0), camera));

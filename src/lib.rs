@@ -1,10 +1,11 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-use std::f32::consts::{PI, TAU};
+use std::f64::consts::{PI, TAU};
 
 use bevy::input::gestures::PinchGesture;
 use bevy::input::mouse::MouseWheel;
+use bevy::math::{DVec2, DVec3, FloatPow, VectorSpace};
 use bevy::prelude::*;
 use bevy::render::camera::{CameraUpdateSystem, RenderTarget};
 use bevy::transform::TransformSystem;
@@ -108,14 +109,14 @@ pub struct PanOrbitCamera {
     /// If you want to change the focus programmatically after initialization, set `target_focus`
     /// instead.
     /// Defaults to `Vec3::ZERO`.
-    pub focus: Vec3,
+    pub focus: DVec3,
     /// The radius of the orbit, or the distance from the `focus` point.
     /// For orthographic projection, this is ignored, and the projection's `scale` is used instead.
     /// If set to `None`, it will be calculated from the camera's current position during
     /// initialization.
     /// Automatically updated.
     /// Defaults to `None`.
-    pub radius: Option<f32>,
+    pub radius: Option<f64>,
     /// Rotation in radians around the global Y axis (longitudinal). Updated automatically.
     /// If both `yaw` and `pitch` are `0.0`, then the camera will be looking forward, i.e. in
     /// the `Vec3::NEG_Z` direction, with up being `Vec3::Y`.
@@ -123,7 +124,7 @@ pub struct PanOrbitCamera {
     /// initialization.
     /// You should not update this after initialization - use `target_yaw` instead.
     /// Defaults to `None`.
-    pub yaw: Option<f32>,
+    pub yaw: Option<f64>,
     /// Rotation in radians around the local X axis (latitudinal). Updated automatically.
     /// If both `yaw` and `pitch` are `0.0`, then the camera will be looking forward, i.e. in
     /// the `Vec3::NEG_Z` direction, with up being `Vec3::Y`.
@@ -131,46 +132,46 @@ pub struct PanOrbitCamera {
     /// initialization.
     /// You should not update this after initialization - use `target_pitch` instead.
     /// Defaults to `None`.
-    pub pitch: Option<f32>,
+    pub pitch: Option<f64>,
     /// The target focus point. The camera will smoothly transition to this value. Updated
     /// automatically, but you can also update it manually to control the camera independently of
     /// the mouse controls, e.g. with the keyboard.
     /// Defaults to `Vec3::ZERO`.
-    pub target_focus: Vec3,
+    pub target_focus: DVec3,
     /// The target yaw value. The camera will smoothly transition to this value. Updated
     /// automatically, but you can also update it manually to control the camera independently of
     /// the mouse controls, e.g. with the keyboard.
     /// Defaults to `0.0`.
-    pub target_yaw: f32,
+    pub target_yaw: f64,
     /// The target pitch value. The camera will smoothly transition to this value Updated
     /// automatically, but you can also update it manually to control the camera independently of
     /// the mouse controls, e.g. with the keyboard.
     /// Defaults to `0.0`.
-    pub target_pitch: f32,
+    pub target_pitch: f64,
     /// The target radius value. The camera will smoothly transition to this value. Updated
     /// automatically, but you can also update it manually to control the camera independently of
     /// the mouse controls, e.g. with the keyboard.
     /// Defaults to `1.0`.
-    pub target_radius: f32,
+    pub target_radius: f64,
     /// Upper limit on the `yaw` value, in radians. Use this to restrict the maximum rotation
     /// around the global Y axis.
     /// Defaults to `None`.
-    pub yaw_upper_limit: Option<f32>,
+    pub yaw_upper_limit: Option<f64>,
     /// Lower limit on the `yaw` value, in radians. Use this to restrict the maximum rotation
     /// around the global Y axis.
     /// Defaults to `None`.
-    pub yaw_lower_limit: Option<f32>,
+    pub yaw_lower_limit: Option<f64>,
     /// Upper limit on the `pitch` value, in radians. Use this to restrict the maximum rotation
     /// around the local X axis.
     /// Defaults to `None`.
-    pub pitch_upper_limit: Option<f32>,
+    pub pitch_upper_limit: Option<f64>,
     /// Lower limit on the `pitch` value, in radians. Use this to restrict the maximum rotation
     /// around the local X axis.
     /// Defaults to `None`.
-    pub pitch_lower_limit: Option<f32>,
+    pub pitch_lower_limit: Option<f64>,
     /// The origin for a shape to restrict the cameras `focus` position.
     /// Defaults to `Vec3::ZERO`.
-    pub focus_bounds_origin: Vec3,
+    pub focus_bounds_origin: DVec3,
     /// The shape (Sphere or Cuboid) that the `focus` is restricted by. Centered on the
     /// `focus_bounds_origin`.
     /// Defaults to `None`.
@@ -178,39 +179,39 @@ pub struct PanOrbitCamera {
     /// Upper limit on the zoom. This applies to `radius`, in the case of using a perspective
     /// camera, or the projection's scale in the case of using an orthographic camera.
     /// Defaults to `None`.
-    pub zoom_upper_limit: Option<f32>,
+    pub zoom_upper_limit: Option<f64>,
     /// Lower limit on the zoom. This applies to `radius`, in the case of using a perspective
     /// camera, or the projection's scale in the case of using an orthographic camera.
     /// Should always be >0 otherwise you'll get stuck at 0.
     /// Defaults to `0.05`.
-    pub zoom_lower_limit: f32,
+    pub zoom_lower_limit: f64,
     /// The sensitivity of the orbiting motion. A value of `0.0` disables orbiting.
     /// Defaults to `1.0`.
-    pub orbit_sensitivity: f32,
+    pub orbit_sensitivity: f64,
     /// How much smoothing is applied to the orbit motion. A value of `0.0` disables smoothing,
     /// so there's a 1:1 mapping of input to camera position. A value of `1.0` is infinite
     /// smoothing.
     /// Defaults to `0.8`.
-    pub orbit_smoothness: f32,
+    pub orbit_smoothness: f64,
     /// The sensitivity of the panning motion. A value of `0.0` disables panning.
     /// Defaults to `1.0`.
-    pub pan_sensitivity: f32,
+    pub pan_sensitivity: f64,
     /// How much smoothing is applied to the panning motion. A value of `0.0` disables smoothing,
     /// so there's a 1:1 mapping of input to camera position. A value of `1.0` is infinite
     /// smoothing.
     /// Defaults to `0.6`.
-    pub pan_smoothness: f32,
+    pub pan_smoothness: f64,
     /// The sensitivity of moving the camera closer or further way using the scroll wheel.
     /// A value of `0.0` disables zooming.
     /// Defaults to `1.0`.
-    pub zoom_sensitivity: f32,
+    pub zoom_sensitivity: f64,
     /// How much smoothing is applied to the zoom motion. A value of `0.0` disables smoothing,
     /// so there's a 1:1 mapping of input to camera position. A value of `1.0` is infinite
     /// smoothing.
     /// Defaults to `0.8`.
     /// Note that this setting does not apply to pixel-based scroll events, as they are typically
     /// already smooth. It only applies to line-based scroll events.
-    pub zoom_smoothness: f32,
+    pub zoom_smoothness: f64,
     /// Button used to orbit the camera.
     /// Defaults to `Button::Left`.
     pub button_orbit: MouseButton,
@@ -242,7 +243,7 @@ pub struct PanOrbitCamera {
     /// effectively disables trackpad orbit/pan functionality. This applies to both orbit and pan.
     /// operations when using a trackpad with the `BlenderLike` behavior mode.
     /// Defaults to `1.0`.
-    pub trackpad_sensitivity: f32,
+    pub trackpad_sensitivity: f64,
     /// Whether to reverse the zoom direction.
     /// Defaults to `false`.
     pub reversed_zoom: bool,
@@ -269,15 +270,16 @@ pub struct PanOrbitCamera {
     /// Axis order definition. This can be used to e.g. define a different default
     /// up direction. The default up is Y, but if you want the camera rotated.
     /// The axis can be switched. Default is [Vec3::X, Vec3::Y, Vec3::Z]
-    pub axis: [Vec3; 3],
-    pub pan_axis: [Vec3; 3],
+    pub axis: [DVec3; 3],
+    pub pan_axis: [DVec3; 3],
+    pub position: DVec3,
 }
 
 impl Default for PanOrbitCamera {
     fn default() -> Self {
         PanOrbitCamera {
-            focus: Vec3::ZERO,
-            target_focus: Vec3::ZERO,
+            focus: DVec3::ZERO,
+            target_focus: DVec3::ZERO,
             radius: None,
             is_upside_down: false,
             allow_upside_down: false,
@@ -308,13 +310,14 @@ impl Default for PanOrbitCamera {
             yaw_lower_limit: None,
             pitch_upper_limit: None,
             pitch_lower_limit: None,
-            focus_bounds_origin: Vec3::ZERO,
+            focus_bounds_origin: DVec3::ZERO,
             focus_bounds_shape: None,
             zoom_upper_limit: None,
             zoom_lower_limit: 0.05,
             force_update: false,
-            axis: [Vec3::X, Vec3::Y, Vec3::Z],
-            pan_axis: [Vec3::X, Vec3::Y, Vec3::Z],
+            axis: [DVec3::X, DVec3::Y, DVec3::Z],
+            pan_axis: [DVec3::X, DVec3::Y, DVec3::Z],
+            position: DVec3::ZERO,
         }
     }
 }
@@ -493,33 +496,51 @@ fn pan_orbit_camera(
         let apply_zoom_limits = {
             let zoom_upper_limit = pan_orbit.zoom_upper_limit;
             let zoom_lower_limit = pan_orbit.zoom_lower_limit;
-            move |zoom: f32| zoom.clamp_optional(Some(zoom_lower_limit), zoom_upper_limit)
+            move |zoom: f64| zoom.clamp_optional(Some(zoom_lower_limit), zoom_upper_limit)
         };
 
         let apply_yaw_limits = {
             let yaw_upper_limit = pan_orbit.yaw_upper_limit;
             let yaw_lower_limit = pan_orbit.yaw_lower_limit;
-            move |yaw: f32| yaw.clamp_optional(yaw_lower_limit, yaw_upper_limit)
+            move |yaw: f64| yaw.clamp_optional(yaw_lower_limit, yaw_upper_limit)
         };
 
         let apply_pitch_limits = {
             let pitch_upper_limit = pan_orbit.pitch_upper_limit;
             let pitch_lower_limit = pan_orbit.pitch_lower_limit;
-            move |pitch: f32| pitch.clamp_optional(pitch_lower_limit, pitch_upper_limit)
+            move |pitch: f64| pitch.clamp_optional(pitch_lower_limit, pitch_upper_limit)
         };
 
         let apply_focus_limits = {
             let origin = pan_orbit.focus_bounds_origin;
             let shape = pan_orbit.focus_bounds_shape;
 
-            move |focus: Vec3| {
+            move |focus: DVec3| {
                 let Some(shape) = shape else {
                     return focus;
                 };
 
                 match shape {
-                    FocusBoundsShape::Cuboid(shape) => shape.closest_point(focus - origin) + origin,
-                    FocusBoundsShape::Sphere(shape) => shape.closest_point(focus - origin) + origin,
+                    FocusBoundsShape::Cuboid(shape) => {
+                        let point = focus - origin;
+                        point.clamp(-shape.half_size.as_dvec3(), shape.half_size.as_dvec3())
+                            + origin
+                    }
+                    FocusBoundsShape::Sphere(shape) => {
+                        let point = focus - origin;
+                        let distance_squared = point.length_squared();
+
+                        let closest_point = if distance_squared <= (shape.radius as f64).powi(2) {
+                            // The point is inside the sphere.
+                            point
+                        } else {
+                            // The point is outside the sphere.
+                            // Find the closest point on the surface of the sphere.
+                            let dir_to_point = point / distance_squared.sqrt();
+                            shape.radius as f64 * dir_to_point
+                        };
+                        closest_point + origin
+                    }
                 }
             }
         };
@@ -529,7 +550,11 @@ fn pan_orbit_camera(
             // these explicitly, this calculation is wasted, but that's okay since it will only run
             // once on init.
             let (yaw, pitch, radius) = util::calculate_from_translation_and_focus(
-                transform.translation,
+                if transform.translation == Vec3::ZERO {
+                    pan_orbit.position
+                } else {
+                    transform.translation.as_dvec3()
+                },
                 pan_orbit.focus,
                 pan_orbit.axis,
             );
@@ -553,14 +578,16 @@ fn pan_orbit_camera(
             pan_orbit.target_radius = radius;
             pan_orbit.target_focus = focus;
 
+            let axis = pan_orbit.axis;
             util::update_orbit_transform(
                 yaw,
                 pitch,
                 radius,
                 focus,
                 &mut transform,
+                &mut pan_orbit.position,
                 &mut projection,
-                pan_orbit.axis,
+                axis,
             );
 
             pan_orbit.initialized = true;
@@ -568,8 +595,8 @@ fn pan_orbit_camera(
 
         // 1 - Get Input
 
-        let mut orbit = Vec2::ZERO;
-        let mut pan = Vec2::ZERO;
+        let mut orbit = DVec2::ZERO;
+        let mut pan = DVec2::ZERO;
         let mut scroll_line = 0.0;
         let mut scroll_pixel = 0.0;
         let mut orbit_button_changed = false;
@@ -583,12 +610,12 @@ fn pan_orbit_camera(
                 false => 1.0,
             };
 
-            orbit = mouse_key_tracker.orbit * pan_orbit.orbit_sensitivity;
-            pan = mouse_key_tracker.pan * pan_orbit.pan_sensitivity;
+            orbit = mouse_key_tracker.orbit.as_dvec2() * pan_orbit.orbit_sensitivity;
+            pan = mouse_key_tracker.pan.as_dvec2() * pan_orbit.pan_sensitivity;
             scroll_line =
-                mouse_key_tracker.scroll_line * zoom_direction * pan_orbit.zoom_sensitivity;
+                mouse_key_tracker.scroll_line as f64 * zoom_direction * pan_orbit.zoom_sensitivity;
             scroll_pixel =
-                mouse_key_tracker.scroll_pixel * zoom_direction * pan_orbit.zoom_sensitivity;
+                mouse_key_tracker.scroll_pixel as f64 * zoom_direction * pan_orbit.zoom_sensitivity;
             orbit_button_changed = mouse_key_tracker.orbit_button_changed;
 
             if pan_orbit.touch_enabled {
@@ -617,9 +644,10 @@ fn pan_orbit_camera(
                     },
                 };
 
-                orbit += touch_orbit * pan_orbit.orbit_sensitivity;
-                pan += touch_pan * pan_orbit.pan_sensitivity;
-                scroll_pixel += touch_zoom_pixel * zoom_direction * pan_orbit.zoom_sensitivity;
+                orbit += touch_orbit.as_dvec2() * pan_orbit.orbit_sensitivity;
+                pan += touch_pan.as_dvec2() * pan_orbit.pan_sensitivity;
+                scroll_pixel +=
+                    touch_zoom_pixel as f64 * zoom_direction * pan_orbit.zoom_sensitivity;
             }
         }
 
@@ -638,14 +666,14 @@ fn pan_orbit_camera(
             // is far too high for small viewports
             if let Some(win_size) = active_cam.window_size {
                 let delta_x = {
-                    let delta = orbit.x / win_size.x * PI * 2.0;
+                    let delta = orbit.x / win_size.x as f64 * PI * 2.0;
                     if pan_orbit.is_upside_down {
                         -delta
                     } else {
                         delta
                     }
                 };
-                let delta_y = orbit.y / win_size.y * PI;
+                let delta_y = orbit.y / win_size.y as f64 * PI;
                 pan_orbit.target_yaw -= delta_x;
                 pan_orbit.target_pitch += delta_y;
 
@@ -658,19 +686,19 @@ fn pan_orbit_camera(
                 let mut multiplier = 1.0;
                 match *projection {
                     Projection::Perspective(ref p) => {
-                        pan *= Vec2::new(p.fov * p.aspect_ratio, p.fov) / vp_size;
+                        pan *= (Vec2::new(p.fov * p.aspect_ratio, p.fov) / vp_size).as_dvec2();
                         // Make panning proportional to distance away from focus point
                         if let Some(radius) = pan_orbit.radius {
                             multiplier = radius;
                         }
                     }
                     Projection::Orthographic(ref p) => {
-                        pan *= Vec2::new(p.area.width(), p.area.height()) / vp_size;
+                        pan *= (Vec2::new(p.area.width(), p.area.height()) / vp_size).as_dvec2();
                     }
                 }
                 // Translate by local axes
-                let right = transform.rotation * pan_orbit.pan_axis[0] * -pan.x;
-                let up = transform.rotation * pan_orbit.pan_axis[1] * pan.y;
+                let right = transform.rotation.as_dquat() * pan_orbit.pan_axis[0] * -pan.x;
+                let up = transform.rotation.as_dquat() * pan_orbit.pan_axis[1] * pan.y;
                 let translation = (right + up) * multiplier;
                 pan_orbit.target_focus += translation;
                 has_moved = true;
@@ -720,39 +748,42 @@ fn pan_orbit_camera(
                 || pan_orbit.force_update
             {
                 // Interpolate towards the target values
-                let new_yaw = util::lerp_and_snap_f32(
+                let dt = time.delta_secs_f64();
+                let new_yaw = util::lerp_and_snap_f64(
                     yaw,
                     pan_orbit.target_yaw,
                     pan_orbit.orbit_smoothness,
-                    time.delta_secs(),
+                    dt,
                 );
-                let new_pitch = util::lerp_and_snap_f32(
+                let new_pitch = util::lerp_and_snap_f64(
                     pitch,
                     pan_orbit.target_pitch,
                     pan_orbit.orbit_smoothness,
-                    time.delta_secs(),
+                    dt,
                 );
-                let new_radius = util::lerp_and_snap_f32(
+                let new_radius = util::lerp_and_snap_f64(
                     radius,
                     pan_orbit.target_radius,
                     pan_orbit.zoom_smoothness,
-                    time.delta_secs(),
+                    dt,
                 );
-                let new_focus = util::lerp_and_snap_vec3(
+                let new_focus = util::lerp_and_snap_dvec3(
                     pan_orbit.focus,
                     pan_orbit.target_focus,
                     pan_orbit.pan_smoothness,
-                    time.delta_secs(),
+                    dt,
                 );
 
+                let axis = pan_orbit.axis;
                 util::update_orbit_transform(
                     new_yaw,
                     new_pitch,
                     new_radius,
                     new_focus,
                     &mut transform,
+                    &mut pan_orbit.position,
                     &mut projection,
-                    pan_orbit.axis,
+                    axis,
                 );
 
                 // Update the current values

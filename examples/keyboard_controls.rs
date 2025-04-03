@@ -6,7 +6,7 @@
 //!     Pan in 1m increments: Ctrl+Shift+Arrows
 //!     Zoom in/out: Z/X
 
-use bevy::prelude::*;
+use bevy::{math::DVec3, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 fn main() {
@@ -59,72 +59,74 @@ fn keyboard_controls(
             // Jump focus point 1m using Ctrl+Shift + Arrows
             if key_input.pressed(KeyCode::ShiftLeft) {
                 if key_input.just_pressed(KeyCode::ArrowRight) {
-                    pan_orbit.target_focus += Vec3::X;
+                    pan_orbit.target_focus += DVec3::X;
                 }
                 if key_input.just_pressed(KeyCode::ArrowLeft) {
-                    pan_orbit.target_focus -= Vec3::X;
+                    pan_orbit.target_focus -= DVec3::X;
                 }
                 if key_input.just_pressed(KeyCode::ArrowUp) {
-                    pan_orbit.target_focus += Vec3::Y;
+                    pan_orbit.target_focus += DVec3::Y;
                 }
                 if key_input.just_pressed(KeyCode::ArrowDown) {
-                    pan_orbit.target_focus -= Vec3::Y;
+                    pan_orbit.target_focus -= DVec3::Y;
                 }
             } else {
                 // Jump by 45 degrees using Left Ctrl + Arrows
                 if key_input.just_pressed(KeyCode::ArrowRight) {
-                    pan_orbit.target_yaw += 45f32.to_radians();
+                    pan_orbit.target_yaw += 45f64.to_radians();
                 }
                 if key_input.just_pressed(KeyCode::ArrowLeft) {
-                    pan_orbit.target_yaw -= 45f32.to_radians();
+                    pan_orbit.target_yaw -= 45f64.to_radians();
                 }
                 if key_input.just_pressed(KeyCode::ArrowUp) {
-                    pan_orbit.target_pitch += 45f32.to_radians();
+                    pan_orbit.target_pitch += 45f64.to_radians();
                 }
                 if key_input.just_pressed(KeyCode::ArrowDown) {
-                    pan_orbit.target_pitch -= 45f32.to_radians();
+                    pan_orbit.target_pitch -= 45f64.to_radians();
                 }
             }
         }
         // Pan using Left Shift + Arrows
         else if key_input.pressed(KeyCode::ShiftLeft) {
-            let mut delta_translation = Vec3::ZERO;
+            let mut delta_translation = DVec3::ZERO;
+            let rot = transform.rotation.as_dquat();
             if key_input.pressed(KeyCode::ArrowRight) {
-                delta_translation += transform.rotation * Vec3::X * time.delta_secs();
+                delta_translation += rot * DVec3::X * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowLeft) {
-                delta_translation += transform.rotation * Vec3::NEG_X * time.delta_secs();
+                delta_translation += rot * DVec3::NEG_X * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowUp) {
-                delta_translation += transform.rotation * Vec3::Y * time.delta_secs();
+                delta_translation += rot * DVec3::Y * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowDown) {
-                delta_translation += transform.rotation * Vec3::NEG_Y * time.delta_secs();
+                delta_translation += rot * DVec3::NEG_Y * time.delta_secs_f64();
             }
-            transform.translation += delta_translation;
+            pan_orbit.position += delta_translation;
+            transform.translation = pan_orbit.position.as_vec3();
             pan_orbit.target_focus += delta_translation;
         }
         // Smooth rotation using arrow keys without modifier
         else {
             if key_input.pressed(KeyCode::ArrowRight) {
-                pan_orbit.target_yaw += 50f32.to_radians() * time.delta_secs();
+                pan_orbit.target_yaw += 50f64.to_radians() * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowLeft) {
-                pan_orbit.target_yaw -= 50f32.to_radians() * time.delta_secs();
+                pan_orbit.target_yaw -= 50f64.to_radians() * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowUp) {
-                pan_orbit.target_pitch += 50f32.to_radians() * time.delta_secs();
+                pan_orbit.target_pitch += 50f64.to_radians() * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::ArrowDown) {
-                pan_orbit.target_pitch -= 50f32.to_radians() * time.delta_secs();
+                pan_orbit.target_pitch -= 50f64.to_radians() * time.delta_secs_f64();
             }
 
             // Zoom with Z and X
             if key_input.pressed(KeyCode::KeyZ) {
-                pan_orbit.target_radius -= 5.0 * time.delta_secs();
+                pan_orbit.target_radius -= 5.0 * time.delta_secs_f64();
             }
             if key_input.pressed(KeyCode::KeyX) {
-                pan_orbit.target_radius += 5.0 * time.delta_secs();
+                pan_orbit.target_radius += 5.0 * time.delta_secs_f64();
             }
         }
 

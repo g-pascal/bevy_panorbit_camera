@@ -77,7 +77,7 @@ fn animate_cube(
 fn cam_follow(mut pan_orbit_q: Query<&mut PanOrbitCamera>, cube_q: Query<&Transform, With<Cube>>) {
     if let Ok(mut pan_orbit) = pan_orbit_q.get_single_mut() {
         if let Ok(cube_tfm) = cube_q.get_single() {
-            pan_orbit.target_focus = cube_tfm.translation;
+            pan_orbit.target_focus = cube_tfm.translation.as_dvec3();
             // Whenever changing properties manually like this, it's necessary to force
             // PanOrbitCamera to update this frame (by default it only updates when there are
             // input events).
